@@ -698,8 +698,15 @@ Peer.prototype._onIceCandidate = function (event) {
       }
     })
   } else if (!event.candidate) {
-    self._iceComplete = true
-    self.emit('_iceComplete')
+    // react-native hack - very specific to our usecase
+    // has to recreate answer/offer after final candidate has been collected, to get ice candidates included in SDP.
+    self._pc.createAnswer(function (answer) {
+      self._iceComplete = true;
+      self.emit('signal', {
+        type: 'answer',
+        sdp: self.sdpTransform(answer.sdp)
+      });
+    });
   }
 }
 
