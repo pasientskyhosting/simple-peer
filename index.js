@@ -3,16 +3,7 @@ module.exports = Peer
 var debug = require('debug')('simple-peer')
 var getBrowserRTC = require('get-browser-rtc')
 var inherits = require('inherits')
-var randombytes = (length) => {
-  let text = "";
-  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-  for (var i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-
-  return text;
-};
+var randombytes = require('randombytes'); 
 var stream = require('readable-stream')
 
 var MAX_BUFFERED_AMOUNT = 64 * 1024
@@ -27,6 +18,26 @@ inherits(Peer, stream.Duplex)
 function Peer (opts) {
   var self = this
   if (!(self instanceof Peer)) return new Peer(opts)
+
+  self._hasLocalCandidate = false;
+  self._hasRelayCandidate = false;
+  self._prematureIceCompletion = false;
+
+  self._prematureIceCheck = function () {
+    self._debug('premature ice check _hasLocalCandidate: %b _hasRelayCandidate: %b', self._hasLocalCandidate, self._hasRelayCandidate);
+    if (self._hasLocalCandidate && self._hasRelayCandidate) {
+      self._debug('premature ice complete!');
+      self._prematureIceCompletion = true;
+      self._iceComplete = true;
+      self.emit('_iceComplete');
+    }
+    else { 
+      self._debug('premature ice - candidates not available, delaying check 2 seconds');
+      self._prematureIceTimeout = setTimeout(self._prematureIceCheck.bind(self), 2 * 1000);
+    }
+  }
+
+  self._prematureIceTimeout = setTimeout(self._prematureIceCheck.bind(self), 2 * 1000);
 
   self._id = randombytes(4).toString('hex').slice(0, 7)
   self._debug('new peer %o', opts)
@@ -700,20 +711,25 @@ Peer.prototype._onIceCandidate = function (event) {
       }
     })
   } else if (!event.candidate) {
-    // react-native hack
-    // has to recreate offer/answer after final candidate has been collected, to get ice candidates included in SDP.
+    if (self._prematureIceCompletion === true) {
+      self._debug('actual ice completion, ignoring because we fired prematurely');
+      return;
+    }
 
-    let createOfferOrAnswer = self._signalType === 'answer' ? self._pc.createAnswer.bind(self._pc) : self._pc.createOffer.bind(self._pc);
+    self._debug('actual ice completion! stopping premature delay');
+    if (self._prematureIceTimeout) clearTimeout(self._prematureIceTimeout);
+    
+    this._iceComplete = true;
+    this.emit('_iceComplete');
+  }
+  else if (event.candidate) {
+    if (event.candidate.type === 'relay') self._hasRelayCandidate = true;
 
-    createOfferOrAnswer(function (offerOrAnswer) {
-      offerOrAnswer.sdp = self.sdpTransform(offerOrAnswer.sdp);
+    var candidateStr = event.candidate.candidate;
 
-      self._iceComplete = true;
-      self.emit('signal', {
-        type: offerOrAnswer.type,
-        sdp: offerOrAnswer.sdp
-      });
-    });
+    if (candidateStr.indexOf(' 192.168.') > -1 || candidateStr.indexOf(' 172.16.') > -1 || candidateStr.indexOf(' 10.') > -1) {
+      self._hasLocalCandidate = true;
+    }
   }
 }
 
