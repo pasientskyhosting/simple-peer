@@ -718,16 +718,23 @@ Peer.prototype._onIceCandidate = function (event) {
 
     self._debug('actual ice completion! stopping premature delay');
     if (self._prematureIceTimeout) clearTimeout(self._prematureIceTimeout);
-    
+
     this._iceComplete = true;
     this.emit('_iceComplete');
   }
   else if (event.candidate) {
-    if (event.candidate.type === 'relay') self._hasRelayCandidate = true;
+    self._debug('candidate arrived', event.candidate);
+    self._debug('candidate type', event.candidate.type);
+    
+    if (event.candidate.type === 'relay') { 
+      self._debug('has relay');
+      self._hasRelayCandidate = true; 
+    }
 
     var candidateStr = event.candidate.candidate;
 
     if (candidateStr.indexOf(' 192.168.') > -1 || candidateStr.indexOf(' 172.16.') > -1 || candidateStr.indexOf(' 10.') > -1) {
+      self._debug('has local');
       self._hasLocalCandidate = true;
     }
   }
