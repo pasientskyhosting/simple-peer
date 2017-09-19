@@ -33,11 +33,11 @@ function Peer (opts) {
     }
     else { 
       self._debug('premature ice - candidates not available, delaying check 2 seconds');
-      self._prematureIceTimeout = setTimeout(self._prematureIceCheck.bind(self), 2 * 1000);
+      self._prematureIceTimeout = setTimeout(self._prematureIceCheck.bind(self), 1 * 1000);
     }
   }
 
-  self._prematureIceTimeout = setTimeout(self._prematureIceCheck.bind(self), 2 * 1000);
+  self._prematureIceTimeout = setTimeout(self._prematureIceCheck.bind(self), 1 * 1000);
 
   self._id = randombytes(4).toString('hex').slice(0, 7)
   self._debug('new peer %o', opts)
@@ -724,7 +724,7 @@ Peer.prototype._onIceCandidate = function (event) {
   }
   else if (event.candidate) {
     self._debug('candidate arrived', event.candidate);
-    
+
     var candidateStr = event.candidate.candidate;
     if (candidateStr.indexOf(' typ relay') > -1) {
       self._debug('has relay');
