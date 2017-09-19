@@ -412,6 +412,7 @@ Peer.prototype._createOffer = function () {
   var self = this
   if (self.destroyed) return
 
+  self._signalType = 'offer';
   self._pc.createOffer(function (offer) {
     if (self.destroyed) return
     offer.sdp = self.sdpTransform(offer.sdp)
@@ -442,6 +443,7 @@ Peer.prototype._createAnswer = function () {
   var self = this
   if (self.destroyed) return
 
+  self._signalType = 'answer';
   self._pc.createAnswer(function (answer) {
     if (self.destroyed) return
     answer.sdp = self.sdpTransform(answer.sdp)
@@ -698,13 +700,18 @@ Peer.prototype._onIceCandidate = function (event) {
       }
     })
   } else if (!event.candidate) {
-    // react-native hack - very specific to our usecase
-    // has to recreate answer/offer after final candidate has been collected, to get ice candidates included in SDP.
-    self._pc.createAnswer(function (answer) {
+    // react-native hack
+    // has to recreate offer/answer after final candidate has been collected, to get ice candidates included in SDP.
+
+    let createOfferOrAnswer = self._signalType === 'answer' ? self._pc.createAnswer.bind(self._pc) : self._pc.createOffer.bind(self._pc);
+
+    createOfferOrAnswer(function (offerOrAnswer) {
+      offerOrAnswer.sdp = self.sdpTransform(offerOrAnswer.sdp);
+
       self._iceComplete = true;
       self.emit('signal', {
-        type: 'answer',
-        sdp: self.sdpTransform(answer.sdp)
+        type: offerOrAnswer.type,
+        sdp: offerOrAnswer.sdp
       });
     });
   }
