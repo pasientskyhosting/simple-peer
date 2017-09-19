@@ -724,15 +724,12 @@ Peer.prototype._onIceCandidate = function (event) {
   }
   else if (event.candidate) {
     self._debug('candidate arrived', event.candidate);
-    self._debug('candidate type', event.candidate.type);
     
-    if (event.candidate.type === 'relay') { 
+    var candidateStr = event.candidate.candidate;
+    if (candidateStr.indexOf(' typ relay') > -1) {
       self._debug('has relay');
       self._hasRelayCandidate = true; 
     }
-
-    var candidateStr = event.candidate.candidate;
-
     if (candidateStr.indexOf(' 192.168.') > -1 || candidateStr.indexOf(' 172.16.') > -1 || candidateStr.indexOf(' 10.') > -1) {
       self._debug('has local');
       self._hasLocalCandidate = true;
