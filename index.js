@@ -28,11 +28,18 @@ function Peer (opts) {
     if (self._hasLocalCandidate && self._hasRelayCandidate) {
       self._debug('premature ice complete!');
       self._prematureIceCompletion = true;
-      var signal = self._pc.localDescription || offer
-      self._pc.localDescription.sdp = self.sdpTransform(self._pc.localDescription.sdp);
       
-      self._iceComplete = true;
-      self.emit('_iceComplete');
+      let createOfferOrAnswer = self._signalType === 'answer' ? self._pc.createAnswer.bind(self._pc) : self._pc.createOffer.bind(self._pc);
+      
+      createOfferOrAnswer(function (offerOrAnswer) {
+        offerOrAnswer.sdp = self.sdpTransform(offerOrAnswer.sdp);
+  
+        self._iceComplete = true;
+        self.emit('signal', {
+          type: offerOrAnswer.type,
+          sdp: offerOrAnswer.sdp
+        });
+      });
     }
     else { 
       self._debug('premature ice - candidates not available, delaying check 2 seconds');
@@ -722,8 +729,20 @@ Peer.prototype._onIceCandidate = function (event) {
     self._debug('actual ice completion! stopping premature delay');
     if (self._prematureIceTimeout) clearTimeout(self._prematureIceTimeout);
 
-    this._iceComplete = true;
-    this.emit('_iceComplete');
+    // react-native hack
+    // has to recreate offer/answer after final candidate has been collected, to get ice candidates included in SDP.
+
+    let createOfferOrAnswer = self._signalType === 'answer' ? self._pc.createAnswer.bind(self._pc) : self._pc.createOffer.bind(self._pc);
+    
+    createOfferOrAnswer(function (offerOrAnswer) {
+      offerOrAnswer.sdp = self.sdpTransform(offerOrAnswer.sdp);
+
+      self._iceComplete = true;
+      self.emit('signal', {
+        type: offerOrAnswer.type,
+        sdp: offerOrAnswer.sdp
+      });
+    });
   }
   else if (event.candidate) {
     self._debug('candidate arrived', event.candidate);
