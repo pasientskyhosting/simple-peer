@@ -28,6 +28,9 @@ function Peer (opts) {
     if (self._hasLocalCandidate && self._hasRelayCandidate) {
       self._debug('premature ice complete!');
       self._prematureIceCompletion = true;
+      var signal = self._pc.localDescription || offer
+      self._pc.localDescription.sdp = self.sdpTransform(self._pc.localDescription.sdp);
+      
       self._iceComplete = true;
       self.emit('_iceComplete');
     }
