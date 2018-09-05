@@ -733,7 +733,7 @@ Peer.prototype._onIceCandidate = function (event) {
       self._debug('has relay');
       self._hasRelayCandidate = true; 
     }
-    if (candidateStr.indexOf(' 192.168.') > -1 || candidateStr.indexOf(' 172.16.') > -1 || candidateStr.indexOf(' 10.') > -1) {
+    if (/^.*\s((127\.)|(10\.)|(172\.1[6-9]\.)|(172\.2[0-9]\.)|(172\.3[0-1]\.)|(192\.168\.)).*/.test(candidateStr)) {
       self._debug('has local');
       self._hasLocalCandidate = true;
     }
