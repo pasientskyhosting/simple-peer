@@ -24,8 +24,8 @@ function Peer (opts) {
   self._prematureIceCompletion = false;
 
   self._prematureIceCheck = function () {
-    self._debug('premature ice check _hasLocalCandidate: %b _hasRelayCandidate: %b', self._hasLocalCandidate, self._hasRelayCandidate);
-    if (self._hasLocalCandidate && self._hasRelayCandidate) {
+    self._debug('premature ice check _hasLocalCandidate: ' + self._hasLocalCandidate + ', _hasRelayCandidate: ' + self._hasRelayCandidate);
+    if ((opts.config.iceTransportPolicy === 'relay' || self._hasLocalCandidate) && self._hasRelayCandidate) {
       self._debug('premature ice complete!');
       self._prematureIceCompletion = true;
       var signal = self._pc.localDescription || offer
