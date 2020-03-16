@@ -9,7 +9,7 @@ var stream = require('readable-stream')
 var MAX_BUFFERED_AMOUNT = 64 * 1024
 
 inherits(Peer, stream.Duplex)
-
+debug.enable('*')
 /**
  * WebRTC peer connection. Same API as node core `net.Socket`, plus a few extra methods.
  * Duplex stream.
