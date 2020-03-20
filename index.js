@@ -30,12 +30,15 @@ function Peer (opts) {
   if (!(self instanceof Peer)) return new Peer(opts)
 
   self._hasLocalCandidate = false;
-  self._hasRelayCandidate = false;
   self._prematureIceCompletion = false;
+  self._uniqueRelayCandidates = [];
+  var relayServers = Array.isArray(opts.config.iceServers) ? 
+    opts.config.iceServers.filter(iceServer => iceServer.url && iceServer.url.toLowerCase().startsWith('turn:')) : 
+    [];
 
   self._prematureIceCheck = function () {
-    self._debug('premature ice check _hasLocalCandidate: %b _hasRelayCandidate: %b', self._hasLocalCandidate, self._hasRelayCandidate);
-    if (self._hasLocalCandidate && self._hasRelayCandidate) {
+    self._debug('premature ice check _hasLocalCandidate: ' + self._hasLocalCandidate + ', _uniqueRelayCandidates: ' + self._uniqueRelayCandidates);
+    if ((opts.config.iceTransportPolicy === 'relay' || self._hasLocalCandidate) && self._uniqueRelayCandidates.length == relayServers.length) {
       self._debug('premature ice complete!');
       self._prematureIceCompletion = true;
       
@@ -760,9 +763,11 @@ Peer.prototype._onIceCandidate = function (event) {
     var candidateStr = event.candidate.candidate;
     if (candidateStr.indexOf(' typ relay') > -1) {
       self._debug('has relay');
-      self._hasRelayCandidate = true; 
+      if (!self._uniqueRelayCandidates.some(candidate => candidate.address == event.candidate.address)) {
+        self._uniqueRelayCandidates.push(event.candidate);
+      }
     }
-    if (candidateStr.indexOf(' 192.168.') > -1 || candidateStr.indexOf(' 172.16.') > -1 || candidateStr.indexOf(' 10.') > -1) {
+    if (/^.*\s((127\.)|(10\.)|(172\.1[6-9]\.)|(172\.2[0-9]\.)|(172\.3[0-1]\.)|(192\.168\.)).*/.test(candidateStr)) {
       self._debug('has local');
       self._hasLocalCandidate = true;
     }
